@@ -1,7 +1,7 @@
 import { useState } from "react";
 import axios from "axios";
 
-function App() {
+export default function App() {
   const [form, setForm] = useState({
     name: "",
     email: "",
@@ -11,13 +11,39 @@ function App() {
   });
 
   const [bookingId, setBookingId] = useState(null);
+  const [message, setMessage] = useState("");
+  const [type, setType] = useState("success");
+  const [loading, setLoading] = useState(false);
+
+  function showMessage(text, msgType = "success") {
+    setMessage(text);
+    setType(msgType);
+
+    setTimeout(() => {
+      setMessage("");
+    }, 4000);
+  }
 
   function handleChange(e) {
     setForm({ ...form, [e.target.name]: e.target.value });
   }
 
+  function validateTime() {
+    if (form.time_from && form.time_to) {
+      return form.time_to > form.time_from;
+    }
+    return true;
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
+
+    if (!validateTime()) {
+      showMessage("Время окончания должно быть позже времени начала", "error");
+      return;
+    }
+
+    setLoading(true);
 
     try {
       const response = await axios.post(
@@ -25,11 +51,13 @@ function App() {
         form
       );
 
-      alert("Бронирование создано!");
       setBookingId(response.data.booking.id);
-    } catch (error) {
-      alert("Ошибка при создании бронирования");
+      showMessage("Бронирование успешно создано!", "success");
+    } catch (err) {
+      showMessage("Ошибка при создании бронирования", "error");
     }
+
+    setLoading(false);
   }
 
   function downloadPdf() {
@@ -39,59 +67,130 @@ function App() {
     );
   }
 
-  return (
-    <div style={{ padding: "40px" }}>
-      <h1>Booking System Frontend</h1>
+return (
+  <div className="min-h-screen w-full flex items-center justify-center bg-gradient-to-br from-blue-50 to-gray-100 p-6">
+      <div className="w-full max-w-xl bg-white/80 backdrop-blur-md shadow-2xl rounded-3xl p-10 border border-gray-200">
+        {/* Header */}
+        <h1 className="text-3xl font-bold text-gray-900">
+          Booking System
+        </h1>
+        <p className="text-gray-500 mt-2">
+          Создайте бронирование и получите PDF подтверждение
+        </p>
 
-      <form onSubmit={handleSubmit}>
-        <input
-          name="name"
-          placeholder="Имя"
-          onChange={handleChange}
-        />
-        <br /><br />
+        {/* Notification */}
+        {message && (
+          <div
+            className={`mt-6 p-4 rounded-xl text-sm font-medium ${
+              type === "success"
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {message}
+          </div>
+        )}
 
-        <input
-          name="email"
-          placeholder="Email"
-          onChange={handleChange}
-        />
-        <br /><br />
+        {/* Form */}
+        <form onSubmit={handleSubmit} className="mt-8 space-y-5">
+          {/* Name */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Full Name
+            </label>
+            <input
+              name="name"
+              required
+              placeholder="Введите имя"
+              onChange={handleChange}
+              className="w-full rounded-xl border border-gray-300 p-3 focus:ring-2 focus:ring-blue-300 outline-none"
+            />
+          </div>
 
-        <input
-          type="date"
-          name="date"
-          onChange={handleChange}
-        />
-        <br /><br />
+          {/* Email */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Email Address
+            </label>
+            <input
+              name="email"
+              type="email"
+              required
+              placeholder="example@mail.com"
+              onChange={handleChange}
+              className="w-full rounded-xl border border-gray-300 p-3 focus:ring-2 focus:ring-blue-300 outline-none"
+            />
+          </div>
 
-        <input
-          type="time"
-          name="time_from"
-          onChange={handleChange}
-        />
-        <br /><br />
+          {/* Date */}
+          <div>
+            <label className="block text-sm font-semibold text-gray-700 mb-1">
+              Booking Date
+            </label>
+            <input
+              type="date"
+              name="date"
+              required
+              onChange={handleChange}
+              className="w-full rounded-xl border border-gray-300 p-3 focus:ring-2 focus:ring-blue-300 outline-none"
+            />
+          </div>
 
-        <input
-          type="time"
-          name="time_to"
-          onChange={handleChange}
-        />
-        <br /><br />
+          {/* Time */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                From
+              </label>
+              <input
+                type="time"
+                name="time_from"
+                required
+                onChange={handleChange}
+                className="w-full rounded-xl border border-gray-300 p-3 focus:ring-2 focus:ring-blue-300 outline-none"
+              />
+            </div>
 
-        <button type="submit">Забронировать</button>
-      </form>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-1">
+                To
+              </label>
+              <input
+                type="time"
+                name="time_to"
+                required
+                onChange={handleChange}
+                className="w-full rounded-xl border border-gray-300 p-3 focus:ring-2 focus:ring-blue-300 outline-none"
+              />
+            </div>
+          </div>
 
-      {bookingId && (
-        <div style={{ marginTop: "20px" }}>
-          <h3>Бронирование #{bookingId}</h3>
-          <button onClick={downloadPdf}>
-            Скачать PDF подтверждение
+          {/* Submit */}
+          <button
+            disabled={loading}
+            className="w-full py-3 rounded-xl bg-blue-600 text-white font-semibold text-lg hover:bg-blue-700 transition disabled:opacity-60"
+          >
+            {loading ? "Создание..." : "Забронировать"}
           </button>
-        </div>
-      )}
+        </form>
+
+        {/* PDF Button */}
+        {bookingId && (
+          <div className="mt-6">
+            <button
+              onClick={downloadPdf}
+              className="w-full py-3 rounded-xl border-2 border-blue-600 text-blue-600 font-semibold hover:bg-blue-50 transition"
+            >
+              Скачать PDF подтверждение (ID: {bookingId})
+            </button>
+          </div>
+        )}
+
+        {/* Footer */}
+        <p className="text-xs text-gray-400 mt-8 text-center">
+          Test Assignment for Booking System by Daniyar Toktasyn
+        </p>
+      </div>
     </div>
   );
 }
-
-export default App;
